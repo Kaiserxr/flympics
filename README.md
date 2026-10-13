@@ -134,6 +134,32 @@ Different random seeds do not provide independent neural-policy validation here:
 the sprint and fly controller are deterministic. Refit and reevaluate if physics,
 connectivity, or dynamics change. Other events remain future work.
 
+## Circuit ablations
+
+```bash
+python -m experiments.ablate_sprint
+python -m experiments.ablate_sprint --k 20 --seeds 0 1 2 3 4 5 6 7 8 9
+```
+
+This compares lesioned circuits with the unchanged control, under both the
+untrained and trained motor thresholds. Conditions remove all sensory,
+interneuron, extensor, or flexor neurons; the top-k interneurons by summed
+input weight onto extensors or flexors; and, as a size-matched control, k
+random interneurons per seed. Results go to `results/ablation_k{k}.json/.csv`.
+Hypotheses and metric are stated in `experiments/ablate_sprint.py`.
+
+`brain.ablation.ablate` returns a lesioned *copy* of the circuit: removed neurons
+lose every incoming and outgoing edge, and their modeled rate is clamped to 0,
+even if the artificial encoder stimulates them. Selected edges can also be cut.
+Surviving weights are not renormalized, and the vendored circuit is unchanged.
+The decoder still averages over all annotated motor neurons, so a silenced motor
+neuron contributes 0 activity.
+
+Ablation is a modeling intervention on a fixed rate model, not a prediction of a
+lesioned fly. The sprint and fly controller are deterministic; seeds only choose
+the random lesions. The trained threshold is tiny (about 1e-5), so small activity
+changes can flip actions: compare targeted lesions against the random control.
+
 ## Tests
 
 ```bash
@@ -152,6 +178,7 @@ brain/dynamics.py       modeled neural dynamics (replaceable)
 brain/sensory.py        artificial observation → stimulation adapter
 brain/motor.py          artificial activity → game-action adapter
 brain/controller.py     closed-loop fly controller
+brain/ablation.py       experiment-only lesioned circuit copies
 experiments/            reproducible CLI experiment and structured logs
 visualization/          intentionally basic Matplotlib output
 data/                   provenance and compact circuit artifact
@@ -163,7 +190,7 @@ Add an event by implementing `OlympicEvent` (`reset`, `observe`, `step`, `is_fin
 
 ## Future ideas (not implemented)
 
-Hurdles, archery, swimming, connectome ablation (“brain surgery”), evolutionary sensory/motor mappings, personalized fly training, student-trained-fly tournaments, replay, and neural-activity visualization are deliberately left for students.
+Hurdles, archery, swimming, evolutionary sensory/motor mappings, personalized fly training, student-trained-fly tournaments, replay, and neural-activity visualization are deliberately left for students.
 
 ## Sources and attribution
 
