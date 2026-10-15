@@ -7,7 +7,7 @@ import json
 import math
 
 from controllers.base import Controller
-from .connectome import load_manc_front_leg_circuit
+from .connectome import ConnectomeCircuit, load_manc_front_leg_circuit
 from .dynamics import RateNetwork
 from .motor import MotorDecoder
 from .sensory import SensoryEncoder
@@ -17,23 +17,23 @@ SPRINT_POLICY = Path(__file__).resolve().parents[1] / "models" / "sprint.json"
 
 class FlyBrainController(Controller):
     """A connectome-derived neural controller, not a simulated complete fly brain."""
-    def __init__(self, motor_threshold: float = 0.015) -> None:
+    def __init__(self, motor_threshold: float = 0.015, circuit: ConnectomeCircuit | None = None) -> None:
         if not math.isfinite(motor_threshold) or not 0 <= motor_threshold <= 1:
             raise ValueError("Motor threshold must be finite and between 0 and 1.")
-        self.circuit = load_manc_front_leg_circuit()
+        self.circuit = circuit if circuit is not None else load_manc_front_leg_circuit()
         self.encoder = SensoryEncoder(self.circuit)
         self.network = RateNetwork(self.circuit)
         self.decoder = MotorDecoder(self.circuit, threshold=motor_threshold)
         self.last_summary: dict[str, float] = {}
 
     @classmethod
-    def trained(cls, path: Path = SPRINT_POLICY) -> FlyBrainController:
+    def trained(cls, path: Path = SPRINT_POLICY, circuit: ConnectomeCircuit | None = None) -> FlyBrainController:
         if not path.exists():
             raise FileNotFoundError(f"Missing sprint policy: {path}. Run python -m experiments.train_sprint")
         policy = json.loads(path.read_text())
         if policy.get("version") != 1 or policy.get("event") != "sprint":
             raise ValueError("Expected a version 1 sprint policy.")
-        return cls(motor_threshold=float(policy["motor_threshold"]))
+        return cls(motor_threshold=float(policy["motor_threshold"]), circuit=circuit)
 
     def reset(self, seed: int | None = None) -> None:
         self.network.reset()
